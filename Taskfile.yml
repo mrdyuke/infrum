@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: "3"
+
+tasks:
+  run:
+    desc: run app
+    cmds:
+      - golangci-lint fmt
+      - golangci-lint run
+      - go run .
+    silent: false
