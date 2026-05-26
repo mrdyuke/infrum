@@ -15,7 +15,8 @@ func main() {
 		fmt.Println(err)
 	}
 
-	appFrameworkScreen := screens.NewAppFrameworkScreen(templates.FrameworkList, generator)
+	appDriverScreen := screens.NewAppDriverScreen(templates.DriverList, generator)
+	appFrameworkScreen := screens.NewAppFrameworkScreen(appDriverScreen, templates.FrameworkList, generator)
 	appNameScreen := screens.NewAppNameScreen(appFrameworkScreen, generator)
 
 	program := tea.NewProgram(appNameScreen)
@@ -23,4 +24,5 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
+
 }

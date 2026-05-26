@@ -14,13 +14,15 @@ type AppFrameworkScreen struct {
 	generator     *generator.Generator
 	cursor        int
 	frameworkList domain.LibraryList
+	nextScreen    tea.Model
 }
 
-func NewAppFrameworkScreen(list domain.LibraryList, generator *generator.Generator) *AppFrameworkScreen {
+func NewAppFrameworkScreen(next tea.Model, list domain.LibraryList, generator *generator.Generator) *AppFrameworkScreen {
 
 	return &AppFrameworkScreen{
 		generator:     generator,
 		frameworkList: list,
+		nextScreen:    next,
 	}
 }
 
@@ -42,7 +44,8 @@ func (s *AppFrameworkScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "enter":
-			return s, nil
+			s.generator.LibList = append(s.generator.LibList, s.frameworkList[s.cursor])
+			return s.nextScreen, nil
 		}
 	}
 
