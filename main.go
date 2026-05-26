@@ -15,7 +15,8 @@ func main() {
 		fmt.Println(err)
 	}
 
-	appDriverScreen := screens.NewAppDriverScreen(templates.DriverList, generator)
+	applyScreen := screens.NewApplyScreen(generator)
+	appDriverScreen := screens.NewAppDriverScreen(applyScreen, templates.DriverList, generator)
 	appFrameworkScreen := screens.NewAppFrameworkScreen(appDriverScreen, templates.FrameworkList, generator)
 	appNameScreen := screens.NewAppNameScreen(appFrameworkScreen, generator)
 

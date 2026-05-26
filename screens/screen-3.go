@@ -14,13 +14,15 @@ type AppDriverScreen struct {
 	generator  *generator.Generator
 	cursor     int
 	driverList domain.LibraryList
+	nextScreen tea.Model
 }
 
-func NewAppDriverScreen(list domain.LibraryList, generator *generator.Generator) *AppDriverScreen {
+func NewAppDriverScreen(next tea.Model, list domain.LibraryList, generator *generator.Generator) *AppDriverScreen {
 
 	return &AppDriverScreen{
 		generator:  generator,
 		driverList: list,
+		nextScreen: next,
 	}
 }
 
@@ -43,7 +45,7 @@ func (s *AppDriverScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "enter":
 			s.generator.LibList = append(s.generator.LibList, s.driverList[s.cursor])
-			return s, tea.Quit
+			return s.nextScreen, nil
 		}
 	}
 
