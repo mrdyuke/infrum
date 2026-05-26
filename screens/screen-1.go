@@ -11,17 +11,22 @@ import (
 )
 
 type AppNameScreen struct {
-	generator *generator.Generator
-	textinput textinput.Model
+	generator  *generator.Generator
+	textInput  textinput.Model
+	nextScreen tea.Model
 }
 
-func NewAppNameScreen(generator *generator.Generator) *AppNameScreen {
+func NewAppNameScreen(next tea.Model, generator *generator.Generator) *AppNameScreen {
 	ti := textinput.New()
 	ti.Focus()
+	ti.SetWidth(45)
+	ti.CharLimit = 45
+	ti.Placeholder = "  My awesome app!"
 
 	return &AppNameScreen{
-		textinput: ti,
-		generator: generator,
+		textInput:  ti,
+		generator:  generator,
+		nextScreen: next,
 	}
 }
 
@@ -33,20 +38,20 @@ func (s *AppNameScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "esc":
 			return s, tea.Quit
 		case "enter":
-			if s.textinput.Value() != "" {
-				s.generator.AppName = s.textinput.Value()
-				return s, nil
+			if s.textInput.Value() != "" {
+				s.generator.AppName = s.textInput.Value()
+				return s.nextScreen, nil
 			}
 		}
 	}
 
 	var cmd tea.Cmd
-	s.textinput, cmd = s.textinput.Update(msg)
+	s.textInput, cmd = s.textInput.Update(msg)
 	return s, cmd
 }
 
 func (s *AppNameScreen) View() tea.View {
-	str := lipgloss.JoinVertical(lipgloss.Top, fmt.Sprintf("\n%s\n%s\n", logo.Logo, s.textinput.View()))
+	str := lipgloss.JoinVertical(lipgloss.Top, fmt.Sprintf("\n%s\n\n%s\n", logo.Logo, s.textInput.View()))
 	view := tea.NewView(str)
 	view.AltScreen = true
 	return view

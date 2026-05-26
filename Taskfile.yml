@@ -10,3 +10,10 @@ tasks:
       - golangci-lint run
       - go run .
     silent: false
+
+  add:
+    cmds:
+      - golangci-lint fmt
+      - golangci-lint run
+      - go mod tidy
+      - git add .

@@ -6,10 +6,6 @@ import (
 	"github.com/mrdyuke/infrum/domain"
 )
 
-var FrameworkList = domain.LibraryList{}
-
-var DriverList = domain.LibraryList{}
-
 type Generator struct {
 	AppName   string
 	TargetDir string

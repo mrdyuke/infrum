@@ -6,6 +6,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/mrdyuke/infrum/generator"
 	"github.com/mrdyuke/infrum/screens"
+	"github.com/mrdyuke/infrum/templates"
 )
 
 func main() {
@@ -14,7 +15,8 @@ func main() {
 		fmt.Println(err)
 	}
 
-	appNameScreen := screens.NewAppNameScreen(generator)
+	appFrameworkScreen := screens.NewAppFrameworkScreen(templates.FrameworkList, generator)
+	appNameScreen := screens.NewAppNameScreen(appFrameworkScreen, generator)
 
 	program := tea.NewProgram(appNameScreen)
 	_, err = program.Run()

@@ -1,6 +1,7 @@
 package domain
 
-type LibraryPaths map[string]map[string]string
+type LibraryFile map[string]string
+type LibraryPaths map[string]LibraryFile
 
 type Library struct {
 	LibName string
