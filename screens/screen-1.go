@@ -8,6 +8,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/mrdyuke/infrum/generator"
 	"github.com/mrdyuke/infrum/screens/logo"
+	"github.com/mrdyuke/infrum/screens/styles"
 )
 
 type AppNameScreen struct {
@@ -51,7 +52,10 @@ func (s *AppNameScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (s *AppNameScreen) View() tea.View {
-	str := lipgloss.JoinVertical(lipgloss.Top, fmt.Sprintf("\n%s\n\n%s\n", logo.Logo, s.textInput.View()))
+	str := lipgloss.JoinVertical(lipgloss.Top, fmt.Sprintf("%s %s %s",
+		styles.LogoStyle(logo.Logo),
+		styles.TitleStyle("Enter your app name ↓"),
+		styles.TextInputStyle(s.textInput.View())))
 	view := tea.NewView(str)
 	view.AltScreen = true
 	return view
