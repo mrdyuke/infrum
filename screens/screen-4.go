@@ -8,6 +8,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/mrdyuke/infrum/generator"
 	"github.com/mrdyuke/infrum/screens/logo"
+	"github.com/mrdyuke/infrum/screens/styles"
 )
 
 type ApplyScreen struct {
@@ -56,12 +57,15 @@ func (s *ApplyScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (s *ApplyScreen) View() tea.View {
-	str := fmt.Sprintf("\n%s\n", logo.Logo)
-
+	str := styles.LogoStyle(logo.Logo)
+	str += styles.TitleStyle("Generate app ↓")
 	for k, v := range s.list {
 		pointer := ""
 		if s.cursor == k {
-			pointer = ">"
+			pointer = lipgloss.NewStyle().
+				Bold(true).
+				Foreground(lipgloss.Color(styles.PrimaryColor)).
+				Render(">")
 		}
 		str += lipgloss.JoinVertical(lipgloss.Top, fmt.Sprintf("\n%s %s\n", pointer, v))
 	}
