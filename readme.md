@@ -2,6 +2,8 @@
 
 A CLI tool that generates Go project scaffolding with your choice of web framework and database driver.
 
+<img width="553" height="487" alt="image" src="https://github.com/user-attachments/assets/f1a4cbb8-f206-4ecc-9cb2-f3f3005c13ac" />
+
 ## Install
 
 ```bash
@@ -48,4 +50,4 @@ Each generated project includes:
 
 ## License
 
-MIT
+[MIT](https://github.com/mrdyuke/infrum/blob/main/LICENSE)
