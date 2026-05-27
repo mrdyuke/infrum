@@ -7,32 +7,28 @@ import (
 	"{{.AppName}}/config"
 	"{{.AppName}}/internal/domain"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 )
 
-// PostgresRepo — PostgreSQL repository implementation using pgxpool.
+// PostgresRepo — PostgreSQL repository implementation using sqlx.
 type PostgresRepo struct {
-	Pool *pgxpool.Pool
+	DB *sqlx.DB
 }
 
 func NewRepo(appConfig *config.Config, ctx context.Context) (*PostgresRepo, error) {
-	cfg, err := pgxpool.ParseConfig(appConfig.Dsn)
+	db, err := sqlx.ConnectContext(ctx, "postgres", appConfig.Dsn)
 	if err != nil {
-		return nil, fmt.Errorf("parse dsn: %w", err)
+		return nil, fmt.Errorf("connect to database: %w", err)
 	}
 
-	cfg.MaxConns = appConfig.MaxConns
+	db.SetMaxOpenConns(int(appConfig.MaxConns))
 
-	pool, err := pgxpool.NewWithConfig(ctx, cfg)
-	if err != nil {
-		return nil, fmt.Errorf("create pool: %w", err)
-	}
-
-	if err := pool.Ping(ctx); err != nil {
+	if err := db.PingContext(ctx); err != nil {
 		return nil, fmt.Errorf("ping database: %w", err)
 	}
 
-	return &PostgresRepo{Pool: pool}, nil
+	return &PostgresRepo{DB: db}, nil
 }
 
 // CreateUser — insert a new user and return it with generated fields.
@@ -40,7 +36,7 @@ func (r *PostgresRepo) CreateUser(ctx context.Context, user domain.User) (domain
 	query := `INSERT INTO users (name, email) VALUES ($1, $2)
 		RETURNING id, name, email, created_at, updated_at`
 
-	err := r.Pool.QueryRow(ctx, query, user.Name, user.Email).Scan(
+	err := r.DB.QueryRowContext(ctx, query, user.Name, user.Email).Scan(
 		&user.ID, &user.Name, &user.Email, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
@@ -55,7 +51,7 @@ func (r *PostgresRepo) GetUser(ctx context.Context, id string) (domain.User, err
 	query := `SELECT id, name, email, created_at, updated_at FROM users WHERE id = $1`
 
 	var user domain.User
-	err := r.Pool.QueryRow(ctx, query, id).Scan(
+	err := r.DB.QueryRowContext(ctx, query, id).Scan(
 		&user.ID, &user.Name, &user.Email, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
@@ -69,22 +65,13 @@ func (r *PostgresRepo) GetUser(ctx context.Context, id string) (domain.User, err
 func (r *PostgresRepo) ListUsers(ctx context.Context) ([]domain.User, error) {
 	query := `SELECT id, name, email, created_at, updated_at FROM users ORDER BY created_at DESC`
 
-	rows, err := r.Pool.Query(ctx, query)
+	var users []domain.User
+	err := r.DB.SelectContext(ctx, &users, query)
 	if err != nil {
 		return nil, fmt.Errorf("list users: %w", err)
 	}
-	defer rows.Close()
 
-	var users []domain.User
-	for rows.Next() {
-		var user domain.User
-		if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.CreatedAt, &user.UpdatedAt); err != nil {
-			return nil, fmt.Errorf("scan user: %w", err)
-		}
-		users = append(users, user)
-	}
-
-	return users, rows.Err()
+	return users, nil
 }
 
 // UpdateUser — update a user's name and/or email.
@@ -96,7 +83,7 @@ func (r *PostgresRepo) UpdateUser(ctx context.Context, user domain.User) (domain
 		WHERE id = $3
 		RETURNING id, name, email, created_at, updated_at`
 
-	err := r.Pool.QueryRow(ctx, query, user.Name, user.Email, user.ID).Scan(
+	err := r.DB.QueryRowContext(ctx, query, user.Name, user.Email, user.ID).Scan(
 		&user.ID, &user.Name, &user.Email, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
@@ -110,12 +97,17 @@ func (r *PostgresRepo) UpdateUser(ctx context.Context, user domain.User) (domain
 func (r *PostgresRepo) DeleteUser(ctx context.Context, id string) error {
 	query := `DELETE FROM users WHERE id = $1`
 
-	result, err := r.Pool.Exec(ctx, query, id)
+	result, err := r.DB.ExecContext(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("delete user %s: %w", id, err)
 	}
 
-	if result.RowsAffected() == 0 {
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("delete result: %w", err)
+	}
+
+	if rows == 0 {
 		return fmt.Errorf("user %s not found", id)
 	}
 

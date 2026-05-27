@@ -1,0 +1,113 @@
+package routes
+
+import (
+	"encoding/json"
+	"net/http"
+	"strings"
+
+	"{{.AppName}}/internal/domain"
+)
+
+// HTTPRoutes — HTTP handler layer.
+type HTTPRoutes struct {
+	Usecases domain.UseCases
+}
+
+func NewServeMux(usecases domain.UseCases) *http.ServeMux {
+	r := &HTTPRoutes{Usecases: usecases}
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("GET /ping", r.Ping)
+
+	mux.HandleFunc("POST /users", r.CreateUser)
+	mux.HandleFunc("GET /users", r.ListUsers)
+	mux.HandleFunc("GET /users/{id}", r.GetUser)
+	mux.HandleFunc("PUT /users/{id}", r.UpdateUser)
+	mux.HandleFunc("DELETE /users/{id}", r.DeleteUser)
+
+	return mux
+}
+
+// Ping — health check endpoint.
+func (r *HTTPRoutes) Ping(w http.ResponseWriter, req *http.Request) {
+	w.WriteHeader(http.StatusOK)
+}
+
+// CreateUser — POST /users
+func (r *HTTPRoutes) CreateUser(w http.ResponseWriter, req *http.Request) {
+	var createReq domain.CreateUserReq
+	if err := json.NewDecoder(req.Body).Decode(&createReq); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	user, err := r.Usecases.CreateUser(req.Context(), createReq)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, user)
+}
+
+// GetUser — GET /users/{id}
+func (r *HTTPRoutes) GetUser(w http.ResponseWriter, req *http.Request) {
+	id := req.PathValue("id")
+
+	user, err := r.Usecases.GetUser(req.Context(), id)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, user)
+}
+
+// ListUsers — GET /users
+func (r *HTTPRoutes) ListUsers(w http.ResponseWriter, req *http.Request) {
+	users, err := r.Usecases.ListUsers(req.Context())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, users)
+}
+
+// UpdateUser — PUT /users/{id}
+func (r *HTTPRoutes) UpdateUser(w http.ResponseWriter, req *http.Request) {
+	var updateReq domain.UpdateUserReq
+	if err := json.NewDecoder(req.Body).Decode(&updateReq); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	updateReq.ID = req.PathValue("id")
+
+	user, err := r.Usecases.UpdateUser(req.Context(), updateReq)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, user)
+}
+
+// DeleteUser — DELETE /users/{id}
+func (r *HTTPRoutes) DeleteUser(w http.ResponseWriter, req *http.Request) {
+	id := req.PathValue("id")
+
+	if err := r.Usecases.DeleteUser(req.Context(), id); err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// writeJSON helper
+func writeJSON(w http.ResponseWriter, status int, data any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
+}

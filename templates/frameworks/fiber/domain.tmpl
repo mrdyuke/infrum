@@ -13,8 +13,8 @@ type User struct {
 
 // CreateUserReq — request payload for creating a user.
 type CreateUserReq struct {
-	Name  string `json:"name" binding:"required"`
-	Email string `json:"email" binding:"required,email"`
+	Name  string `json:"name" validate:"required"`
+	Email string `json:"email" validate:"required,email"`
 }
 
 // UpdateUserReq — request payload for updating a user.

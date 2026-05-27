@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
+	"log"
+
 	"{{.AppName}}/config"
 	"{{.AppName}}/internal/repository/postgres"
 	"{{.AppName}}/internal/routes"
 	"{{.AppName}}/internal/usecases"
-	"log"
 
 	"github.com/fvbock/endless"
 	"github.com/gin-gonic/gin"
@@ -26,13 +27,10 @@ func main() {
 
 	// 3. Create router with middleware
 	router := gin.New()
-
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 
 	// 4. Initialize dependencies
-	//    When adding new dependencies (Redis, S3, etc.)
-	//    wire them here and pass to usecases.
 	repo, err := postgres.NewRepo(cfg, context.Background())
 	if err != nil {
 		log.Fatalln(err)
@@ -42,13 +40,16 @@ func main() {
 	routes := routes.NewHTTPRoutes(usecases)
 
 	// 5. Register routes
-	//    Add new routes here:
-	//    router.POST("/users", routes.CreateUser)
-	//    router.GET("/users/:id", routes.GetUser)
-	//    router.GET("/users", routes.ListUsers)
-	//    router.PUT("/users/:id", routes.UpdateUser)
-	//    router.DELETE("/users/:id", routes.DeleteUser)
 	router.GET("/ping", routes.Ping)
+
+	api := router.Group("/users")
+	{
+		api.POST("", routes.CreateUser)
+		api.GET("", routes.ListUsers)
+		api.GET("/:id", routes.GetUser)
+		api.PUT("/:id", routes.UpdateUser)
+		api.DELETE("/:id", routes.DeleteUser)
+	}
 
 	// 6. Start server with graceful shutdown
 	if err := endless.ListenAndServe(cfg.Port, router); err != nil {

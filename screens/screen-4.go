@@ -2,7 +2,6 @@ package screens
 
 import (
 	"fmt"
-	"log"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -15,6 +14,7 @@ type ApplyScreen struct {
 	generator *generator.Generator
 	list      [2]string
 	cursor    int
+	err       string
 }
 
 func NewApplyScreen(generator *generator.Generator) *ApplyScreen {
@@ -46,7 +46,8 @@ func (s *ApplyScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if s.cursor == 0 {
 				err := s.generator.Generate()
 				if err != nil {
-					log.Fatal(err)
+					s.err = err.Error()
+					return s, nil
 				}
 			}
 			return s, tea.Quit
@@ -62,12 +63,13 @@ func (s *ApplyScreen) View() tea.View {
 	for k, v := range s.list {
 		pointer := ""
 		if s.cursor == k {
-			pointer = lipgloss.NewStyle().
-				Bold(true).
-				Foreground(lipgloss.Color(styles.PrimaryColor)).
-				Render(">")
+			pointer = styles.CursorPointerStyle()
 		}
 		str += lipgloss.JoinVertical(lipgloss.Top, fmt.Sprintf("\n%s %s\n", pointer, v))
+	}
+
+	if s.err != "" {
+		str += "\n" + styles.ErrorStyle(s.err)
 	}
 
 	view := tea.NewView(str)
