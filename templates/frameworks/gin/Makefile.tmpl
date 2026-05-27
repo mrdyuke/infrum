@@ -1,0 +1,23 @@
+APP_NAME ?= {{.AppName}}
+GO ?= go
+BIN_DIR ?= bin
+
+.PHONY: build run test vet tidy clean
+
+build:
+	$(GO) build -o $(BIN_DIR)/$(APP_NAME) ./cmd/api/
+
+run:
+	$(GO) run ./cmd/api/
+
+test:
+	$(GO) test ./... -v -count=1
+
+vet:
+	$(GO) vet ./...
+
+tidy:
+	$(GO) mod tidy
+
+clean:
+	rm -rf $(BIN_DIR)

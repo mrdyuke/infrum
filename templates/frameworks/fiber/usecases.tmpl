@@ -1,13 +1,60 @@
 package usecases
 
-import "{{.AppName}}/internal/domain"
+import (
+	"context"
+	"fmt"
 
+	"{{.AppName}}/internal/domain"
+)
+
+// UseCases implements the application's business logic.
+// Delegates data access to Repo and applies business rules.
 type UseCases struct {
 	Repo domain.Repo
 }
 
 func NewCases(repo domain.Repo) *UseCases {
-	return &UseCases{
-		Repo: repo,
+	return &UseCases{Repo: repo}
+}
+
+func (uc *UseCases) CreateUser(ctx context.Context, req domain.CreateUserReq) (domain.User, error) {
+	if req.Name == "" {
+		return domain.User{}, fmt.Errorf("name is required")
 	}
+	if req.Email == "" {
+		return domain.User{}, fmt.Errorf("email is required")
+	}
+	return uc.Repo.CreateUser(ctx, domain.User{
+		Name:  req.Name,
+		Email: req.Email,
+	})
+}
+
+func (uc *UseCases) GetUser(ctx context.Context, id string) (domain.User, error) {
+	if id == "" {
+		return domain.User{}, fmt.Errorf("id is required")
+	}
+	return uc.Repo.GetUser(ctx, id)
+}
+
+func (uc *UseCases) ListUsers(ctx context.Context) ([]domain.User, error) {
+	return uc.Repo.ListUsers(ctx)
+}
+
+func (uc *UseCases) UpdateUser(ctx context.Context, req domain.UpdateUserReq) (domain.User, error) {
+	if req.ID == "" {
+		return domain.User{}, fmt.Errorf("id is required")
+	}
+	return uc.Repo.UpdateUser(ctx, domain.User{
+		ID:    req.ID,
+		Name:  req.Name,
+		Email: req.Email,
+	})
+}
+
+func (uc *UseCases) DeleteUser(ctx context.Context, id string) error {
+	if id == "" {
+		return fmt.Errorf("id is required")
+	}
+	return uc.Repo.DeleteUser(ctx, id)
 }

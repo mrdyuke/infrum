@@ -2,12 +2,16 @@ package postgres
 
 import (
 	"context"
+	"fmt"
+
 	"{{.AppName}}/config"
+	"{{.AppName}}/internal/domain"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
+// PostgresRepo — PostgreSQL repository implementation using GORM.
 type PostgresRepo struct {
 	DB *gorm.DB
 }
@@ -15,24 +19,122 @@ type PostgresRepo struct {
 func NewRepo(appConfig *config.Config, _ context.Context) (*PostgresRepo, error) {
 	db, err := gorm.Open(postgres.Open(appConfig.Dsn), &gorm.Config{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open database: %w", err)
 	}
 
 	sqlDB, err := db.DB()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get underlying sql.DB: %w", err)
 	}
 
 	sqlDB.SetMaxOpenConns(int(appConfig.MaxConns))
 
-	return &PostgresRepo{
-		DB: db,
-	}, nil
+	return &PostgresRepo{DB: db}, nil
 }
 
-// AutoMigrate — run auto-migrations for your models.
-// Uncomment and add your models:
-//
-//	func (r *PostgresRepo) AutoMigrate() error {
-//	    return r.DB.AutoMigrate(&User{})
-//	}
+// AutoMigrate — run auto-migrations to keep the database schema up to date.
+func (r *PostgresRepo) AutoMigrate() error {
+	return r.DB.AutoMigrate(&User{})
+}
+
+// User — GORM model for the users table.
+type User struct {
+	ID        string `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	Name      string `gorm:"not null"`
+	Email     string `gorm:"uniqueIndex;not null"`
+	CreatedAt string `gorm:"autoCreateTime"`
+	UpdatedAt string `gorm:"autoUpdateTime"`
+}
+
+// TableName — explicit table name for the User model.
+func (User) TableName() string {
+	return "users"
+}
+
+// toDomain converts a GORM User to a domain User.
+func (u *User) toDomain() domain.User {
+	return domain.User{
+		ID:        u.ID,
+		Name:      u.Name,
+		Email:     u.Email,
+		CreatedAt: u.CreatedAt,
+		UpdatedAt: u.UpdatedAt,
+	}
+}
+
+// fromDomain converts a domain User to a GORM User.
+func fromDomain(u domain.User) *User {
+	return &User{
+		ID:    u.ID,
+		Name:  u.Name,
+		Email: u.Email,
+	}
+}
+
+// CreateUser — insert a new user.
+func (r *PostgresRepo) CreateUser(ctx context.Context, user domain.User) (domain.User, error) {
+	u := fromDomain(user)
+	if err := r.DB.WithContext(ctx).Create(u).Error; err != nil {
+		return domain.User{}, fmt.Errorf("create user: %w", err)
+	}
+	return u.toDomain(), nil
+}
+
+// GetUser — fetch a single user by ID.
+func (r *PostgresRepo) GetUser(ctx context.Context, id string) (domain.User, error) {
+	var u User
+	if err := r.DB.WithContext(ctx).First(&u, "id = ?", id).Error; err != nil {
+		return domain.User{}, fmt.Errorf("get user %s: %w", id, err)
+	}
+	return u.toDomain(), nil
+}
+
+// ListUsers — fetch all users ordered by creation date.
+func (r *PostgresRepo) ListUsers(ctx context.Context) ([]domain.User, error) {
+	var users []User
+	if err := r.DB.WithContext(ctx).Order("created_at DESC").Find(&users).Error; err != nil {
+		return nil, fmt.Errorf("list users: %w", err)
+	}
+
+	result := make([]domain.User, len(users))
+	for i, u := range users {
+		result[i] = u.toDomain()
+	}
+	return result, nil
+}
+
+// UpdateUser — update a user's name and/or email.
+func (r *PostgresRepo) UpdateUser(ctx context.Context, user domain.User) (domain.User, error) {
+	updates := map[string]interface{}{}
+	if user.Name != "" {
+		updates["name"] = user.Name
+	}
+	if user.Email != "" {
+		updates["email"] = user.Email
+	}
+
+	if len(updates) == 0 {
+		return r.GetUser(ctx, user.ID)
+	}
+
+	u := fromDomain(user)
+	if err := r.DB.WithContext(ctx).Model(u).Where("id = ?", user.ID).Updates(updates).Error; err != nil {
+		return domain.User{}, fmt.Errorf("update user %s: %w", user.ID, err)
+	}
+
+	return r.GetUser(ctx, user.ID)
+}
+
+// DeleteUser — delete a user by ID.
+func (r *PostgresRepo) DeleteUser(ctx context.Context, id string) error {
+	result := r.DB.WithContext(ctx).Delete(&User{}, "id = ?", id)
+	if result.Error != nil {
+		return fmt.Errorf("delete user %s: %w", id, result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("user %s not found", id)
+	}
+
+	return nil
+}

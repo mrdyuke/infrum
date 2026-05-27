@@ -2,12 +2,16 @@ package postgres
 
 import (
 	"context"
+	"fmt"
+
 	"{{.AppName}}/config"
+	"{{.AppName}}/internal/domain"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
 
+// PostgresRepo — PostgreSQL repository implementation using sqlx.
 type PostgresRepo struct {
 	DB *sqlx.DB
 }
@@ -15,32 +19,97 @@ type PostgresRepo struct {
 func NewRepo(appConfig *config.Config, ctx context.Context) (*PostgresRepo, error) {
 	db, err := sqlx.ConnectContext(ctx, "postgres", appConfig.Dsn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("connect to database: %w", err)
 	}
 
 	db.SetMaxOpenConns(int(appConfig.MaxConns))
 
 	if err := db.PingContext(ctx); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ping database: %w", err)
 	}
 
-	return &PostgresRepo{
-		DB: db,
-	}, nil
+	return &PostgresRepo{DB: db}, nil
 }
 
-// Create — create a record (stub).
-func (r *PostgresRepo) Create(ctx context.Context) {
+// CreateUser — insert a new user and return it with generated fields.
+func (r *PostgresRepo) CreateUser(ctx context.Context, user domain.User) (domain.User, error) {
+	query := `INSERT INTO users (name, email) VALUES ($1, $2)
+		RETURNING id, name, email, created_at, updated_at`
+
+	err := r.DB.QueryRowContext(ctx, query, user.Name, user.Email).Scan(
+		&user.ID, &user.Name, &user.Email, &user.CreatedAt, &user.UpdatedAt,
+	)
+	if err != nil {
+		return domain.User{}, fmt.Errorf("insert user: %w", err)
+	}
+
+	return user, nil
 }
 
-// Read — read a record (stub).
-func (r *PostgresRepo) Read(ctx context.Context) {
+// GetUser — fetch a single user by ID.
+func (r *PostgresRepo) GetUser(ctx context.Context, id string) (domain.User, error) {
+	query := `SELECT id, name, email, created_at, updated_at FROM users WHERE id = $1`
+
+	var user domain.User
+	err := r.DB.QueryRowContext(ctx, query, id).Scan(
+		&user.ID, &user.Name, &user.Email, &user.CreatedAt, &user.UpdatedAt,
+	)
+	if err != nil {
+		return domain.User{}, fmt.Errorf("get user %s: %w", id, err)
+	}
+
+	return user, nil
 }
 
-// Update — update a record (stub).
-func (r *PostgresRepo) Update(ctx context.Context) {
+// ListUsers — fetch all users ordered by creation date.
+func (r *PostgresRepo) ListUsers(ctx context.Context) ([]domain.User, error) {
+	query := `SELECT id, name, email, created_at, updated_at FROM users ORDER BY created_at DESC`
+
+	var users []domain.User
+	err := r.DB.SelectContext(ctx, &users, query)
+	if err != nil {
+		return nil, fmt.Errorf("list users: %w", err)
+	}
+
+	return users, nil
 }
 
-// Delete — delete a record (stub).
-func (r *PostgresRepo) Delete(ctx context.Context) {
+// UpdateUser — update a user's name and/or email.
+func (r *PostgresRepo) UpdateUser(ctx context.Context, user domain.User) (domain.User, error) {
+	query := `UPDATE users
+		SET name = COALESCE(NULLIF($1, ''), name),
+		    email = COALESCE(NULLIF($2, ''), email),
+		    updated_at = NOW()
+		WHERE id = $3
+		RETURNING id, name, email, created_at, updated_at`
+
+	err := r.DB.QueryRowContext(ctx, query, user.Name, user.Email, user.ID).Scan(
+		&user.ID, &user.Name, &user.Email, &user.CreatedAt, &user.UpdatedAt,
+	)
+	if err != nil {
+		return domain.User{}, fmt.Errorf("update user %s: %w", user.ID, err)
+	}
+
+	return user, nil
+}
+
+// DeleteUser — delete a user by ID.
+func (r *PostgresRepo) DeleteUser(ctx context.Context, id string) error {
+	query := `DELETE FROM users WHERE id = $1`
+
+	result, err := r.DB.ExecContext(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("delete user %s: %w", id, err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("delete result: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("user %s not found", id)
+	}
+
+	return nil
 }

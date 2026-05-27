@@ -1,4 +1,44 @@
 package domain
 
-type UseCases interface{}
-type Repo interface{}
+import "context"
+
+// User — domain model representing a user entity.
+type User struct {
+	ID        string `json:"id"`
+	Name      string `json:"name" validate:"required"`
+	Email     string `json:"email" validate:"required,email"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+// CreateUserReq — request payload for creating a user.
+type CreateUserReq struct {
+	Name  string `json:"name" validate:"required"`
+	Email string `json:"email" validate:"required,email"`
+}
+
+// UpdateUserReq — request payload for updating a user.
+// ID is set from the URL path, not from the request body.
+type UpdateUserReq struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+// UseCases — business logic layer interface.
+type UseCases interface {
+	CreateUser(ctx context.Context, req CreateUserReq) (User, error)
+	GetUser(ctx context.Context, id string) (User, error)
+	ListUsers(ctx context.Context) ([]User, error)
+	UpdateUser(ctx context.Context, req UpdateUserReq) (User, error)
+	DeleteUser(ctx context.Context, id string) error
+}
+
+// Repo — data access layer interface.
+type Repo interface {
+	CreateUser(ctx context.Context, user User) (User, error)
+	GetUser(ctx context.Context, id string) (User, error)
+	ListUsers(ctx context.Context) ([]User, error)
+	UpdateUser(ctx context.Context, user User) (User, error)
+	DeleteUser(ctx context.Context, id string) error
+}

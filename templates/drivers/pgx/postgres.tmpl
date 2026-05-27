@@ -2,30 +2,15 @@ package postgres
 
 import (
 	"context"
+	"fmt"
+
 	"{{.AppName}}/config"
+	"{{.AppName}}/internal/domain"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// PostgresRepo — PostgreSQL repository implementation.
-//
-// Uses pgxpool for connection pooling.
-// Implements the domain.Repo interface (once it is defined).
-//
-// Example of adding a method:
-//
-//	func (r *PostgresRepo) Create(ctx context.Context, entity interface{}) error {
-//	    query := `INSERT INTO users (name, email, created_at)
-//	              VALUES ($1, $2, NOW())
-//	              RETURNING id, created_at, updated_at`
-//
-//    	row := r.Pool.QueryRow(ctx, query, entity.Name, entity.Email)
-//    	if err := row.Scan(&entity.ID, &entity.CreatedAt, &entity.UpdatedAt); err != nil {
-//    	    return fmt.Errorf("insert user: %w", err)
-//    	}
-//    	return nil
-//	}
-
+// PostgresRepo — PostgreSQL repository implementation using pgxpool.
 type PostgresRepo struct {
 	Pool *pgxpool.Pool
 }
@@ -33,42 +18,106 @@ type PostgresRepo struct {
 func NewRepo(appConfig *config.Config, ctx context.Context) (*PostgresRepo, error) {
 	cfg, err := pgxpool.ParseConfig(appConfig.Dsn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse dsn: %w", err)
 	}
 
 	cfg.MaxConns = appConfig.MaxConns
 
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create pool: %w", err)
 	}
 
-	err = pool.Ping(ctx)
+	if err := pool.Ping(ctx); err != nil {
+		return nil, fmt.Errorf("ping database: %w", err)
+	}
+
+	return &PostgresRepo{Pool: pool}, nil
+}
+
+// CreateUser — insert a new user and return it with generated fields.
+func (r *PostgresRepo) CreateUser(ctx context.Context, user domain.User) (domain.User, error) {
+	query := `INSERT INTO users (name, email) VALUES ($1, $2)
+		RETURNING id, name, email, created_at, updated_at`
+
+	err := r.Pool.QueryRow(ctx, query, user.Name, user.Email).Scan(
+		&user.ID, &user.Name, &user.Email, &user.CreatedAt, &user.UpdatedAt,
+	)
 	if err != nil {
-		return nil, err
+		return domain.User{}, fmt.Errorf("insert user: %w", err)
 	}
 
-	return &PostgresRepo{
-		Pool: pool,
-	}, nil
+	return user, nil
 }
 
-// Create — create a record (stub).
-// Uncomment and adapt to your model.
-func (r *PostgresRepo) Create(ctx context.Context) {
+// GetUser — fetch a single user by ID.
+func (r *PostgresRepo) GetUser(ctx context.Context, id string) (domain.User, error) {
+	query := `SELECT id, name, email, created_at, updated_at FROM users WHERE id = $1`
+
+	var user domain.User
+	err := r.Pool.QueryRow(ctx, query, id).Scan(
+		&user.ID, &user.Name, &user.Email, &user.CreatedAt, &user.UpdatedAt,
+	)
+	if err != nil {
+		return domain.User{}, fmt.Errorf("get user %s: %w", id, err)
+	}
+
+	return user, nil
 }
 
-// Read — read a record (stub).
-// Uncomment and adapt to your model.
-func (r *PostgresRepo) Read(ctx context.Context) {
+// ListUsers — fetch all users ordered by creation date.
+func (r *PostgresRepo) ListUsers(ctx context.Context) ([]domain.User, error) {
+	query := `SELECT id, name, email, created_at, updated_at FROM users ORDER BY created_at DESC`
+
+	rows, err := r.Pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("list users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []domain.User
+	for rows.Next() {
+		var user domain.User
+		if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.CreatedAt, &user.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("scan user: %w", err)
+		}
+		users = append(users, user)
+	}
+
+	return users, rows.Err()
 }
 
-// Update — update a record (stub).
-// Uncomment and adapt to your model.
-func (r *PostgresRepo) Update(ctx context.Context) {
+// UpdateUser — update a user's name and/or email.
+func (r *PostgresRepo) UpdateUser(ctx context.Context, user domain.User) (domain.User, error) {
+	query := `UPDATE users
+		SET name = COALESCE(NULLIF($1, ''), name),
+		    email = COALESCE(NULLIF($2, ''), email),
+		    updated_at = NOW()
+		WHERE id = $3
+		RETURNING id, name, email, created_at, updated_at`
+
+	err := r.Pool.QueryRow(ctx, query, user.Name, user.Email, user.ID).Scan(
+		&user.ID, &user.Name, &user.Email, &user.CreatedAt, &user.UpdatedAt,
+	)
+	if err != nil {
+		return domain.User{}, fmt.Errorf("update user %s: %w", user.ID, err)
+	}
+
+	return user, nil
 }
 
-// Delete — delete a record (stub).
-// Uncomment and adapt to your model.
-func (r *PostgresRepo) Delete(ctx context.Context) {
+// DeleteUser — delete a user by ID.
+func (r *PostgresRepo) DeleteUser(ctx context.Context, id string) error {
+	query := `DELETE FROM users WHERE id = $1`
+
+	result, err := r.Pool.Exec(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("delete user %s: %w", id, err)
+	}
+
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("user %s not found", id)
+	}
+
+	return nil
 }

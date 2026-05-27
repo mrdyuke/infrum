@@ -1,12 +1,14 @@
 package routes
 
 import (
-	"{{.AppName}}/internal/domain"
 	"net/http"
+
+	"{{.AppName}}/internal/domain"
 
 	"github.com/labstack/echo/v4"
 )
 
+// HTTPRoutes — HTTP handler layer.
 type HTTPRoutes struct {
 	Usecases domain.UseCases
 }
@@ -15,8 +17,83 @@ func Register(e *echo.Echo, usecases domain.UseCases) {
 	r := &HTTPRoutes{Usecases: usecases}
 
 	e.GET("/ping", r.Ping)
+
+	users := e.Group("/users")
+	{
+		users.POST("", r.CreateUser)
+		users.GET("", r.ListUsers)
+		users.GET("/:id", r.GetUser)
+		users.PUT("/:id", r.UpdateUser)
+		users.DELETE("/:id", r.DeleteUser)
+	}
 }
 
+// Ping — health check endpoint.
 func (r *HTTPRoutes) Ping(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
+}
+
+// CreateUser — POST /users
+func (r *HTTPRoutes) CreateUser(c echo.Context) error {
+	var req domain.CreateUserReq
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+	}
+
+	user, err := r.Usecases.CreateUser(c.Request().Context(), req)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusCreated, user)
+}
+
+// GetUser — GET /users/:id
+func (r *HTTPRoutes) GetUser(c echo.Context) error {
+	id := c.Param("id")
+
+	user, err := r.Usecases.GetUser(c.Request().Context(), id)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, user)
+}
+
+// ListUsers — GET /users
+func (r *HTTPRoutes) ListUsers(c echo.Context) error {
+	users, err := r.Usecases.ListUsers(c.Request().Context())
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, users)
+}
+
+// UpdateUser — PUT /users/:id
+func (r *HTTPRoutes) UpdateUser(c echo.Context) error {
+	var req domain.UpdateUserReq
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+	}
+
+	req.ID = c.Param("id")
+
+	user, err := r.Usecases.UpdateUser(c.Request().Context(), req)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, user)
+}
+
+// DeleteUser — DELETE /users/:id
+func (r *HTTPRoutes) DeleteUser(c echo.Context) error {
+	id := c.Param("id")
+
+	if err := r.Usecases.DeleteUser(c.Request().Context(), id); err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
+	}
+
+	return c.NoContent(http.StatusNoContent)
 }

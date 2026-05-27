@@ -1,50 +1,95 @@
 package routes
 
 import (
-	"{{.AppName}}/internal/domain"
 	"net/http"
+
+	"{{.AppName}}/internal/domain"
 
 	"github.com/gin-gonic/gin"
 )
 
-// HTTPRoutes — the HTTP handler layer.
-//
-// It receives HTTP requests, parses them, and delegates to UseCases.
-// Returns JSON responses to the client.
-//
-// Order of adding a new handler:
-//  1. Define the method in domain.UseCases (internal/domain/domain.go)
-//  2. Implement it in usecases (internal/usecases/usecases.go)
-//  3. Add the handler here — it will call r.Usecases directly
-//
-// Example handler (after methods are added to domain.UseCases):
-//
-//	func (r *HTTPRoutes) CreateUser(c *gin.Context) {
-//	    var req domain.CreateUserReq
-//	    if err := c.ShouldBindJSON(&req); err != nil {
-//	        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-//	        return
-//	    }
-//
-//	    user, err := r.Usecases.CreateUser(c.Request.Context(), req)
-//	    if err != nil {
-//	        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-//	        return
-//	    }
-//
-//	    c.JSON(http.StatusCreated, user)
-//	}
+// HTTPRoutes — HTTP handler layer.
 type HTTPRoutes struct {
 	Usecases domain.UseCases
 }
 
 func NewHTTPRoutes(usecases domain.UseCases) *HTTPRoutes {
-	return &HTTPRoutes{
-		Usecases: usecases,
-	}
+	return &HTTPRoutes{Usecases: usecases}
 }
 
-// Ping — simple health-check endpoint.
+// Ping — health check endpoint.
 func (r *HTTPRoutes) Ping(c *gin.Context) {
 	c.Status(http.StatusOK)
+}
+
+// CreateUser — POST /users
+func (r *HTTPRoutes) CreateUser(c *gin.Context) {
+	var req domain.CreateUserReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	user, err := r.Usecases.CreateUser(c.Request.Context(), req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, user)
+}
+
+// GetUser — GET /users/:id
+func (r *HTTPRoutes) GetUser(c *gin.Context) {
+	id := c.Param("id")
+
+	user, err := r.Usecases.GetUser(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+// ListUsers — GET /users
+func (r *HTTPRoutes) ListUsers(c *gin.Context) {
+	users, err := r.Usecases.ListUsers(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, users)
+}
+
+// UpdateUser — PUT /users/:id
+func (r *HTTPRoutes) UpdateUser(c *gin.Context) {
+	var req domain.UpdateUserReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	req.ID = c.Param("id")
+
+	user, err := r.Usecases.UpdateUser(c.Request.Context(), req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+// DeleteUser — DELETE /users/:id
+func (r *HTTPRoutes) DeleteUser(c *gin.Context) {
+	id := c.Param("id")
+
+	if err := r.Usecases.DeleteUser(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }

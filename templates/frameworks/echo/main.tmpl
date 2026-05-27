@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
+	"log"
+
 	"{{.AppName}}/config"
 	"{{.AppName}}/internal/repository/postgres"
 	"{{.AppName}}/internal/routes"
 	"{{.AppName}}/internal/usecases"
-	"log"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
