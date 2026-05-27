@@ -59,10 +59,7 @@ func (s *AppFrameworkScreen) View() tea.View {
 	for k, v := range s.frameworkList {
 		pointer := ""
 		if s.cursor == k {
-			pointer = lipgloss.NewStyle().
-				Bold(true).
-				Foreground(lipgloss.Color(styles.PrimaryColor)).
-				Render(">")
+			pointer = styles.CursorPointerStyle()
 		}
 		str += lipgloss.JoinVertical(lipgloss.Top, fmt.Sprintf("\n%s %s\n", pointer, v.LibName))
 	}

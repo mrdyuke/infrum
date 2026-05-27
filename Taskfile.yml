@@ -3,17 +3,78 @@
 version: "3"
 
 tasks:
-  run:
-    desc: run app
+  default:
+    desc: Run lint, fmt, tidy, and run the app
     cmds:
-      - golangci-lint fmt
-      - golangci-lint run
+      - task: fmt
+      - task: lint
+      - task: run
+
+  run:
+    desc: Run the application
+    cmds:
       - go run .
     silent: false
 
-  add:
+  build:
+    desc: Build the binary
+    cmds:
+      - go build -o infrum .
+    silent: false
+
+  fmt:
+    desc: Format Go code
     cmds:
       - golangci-lint fmt
+    silent: false
+
+  lint:
+    desc: Run golangci-lint
+    cmds:
       - golangci-lint run
+    silent: false
+
+  tidy:
+    desc: Tidy Go modules
+    cmds:
       - go mod tidy
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test ./...
+    silent: false
+
+  vet:
+    desc: Run go vet
+    cmds:
+      - go vet ./...
+
+  add:
+    desc: Format, lint, tidy, and stage all changes
+    cmds:
+      - task: fmt
+      - task: lint
+      - task: tidy
       - git add .
+
+  docker-build:
+    desc: Build Docker image
+    cmds:
+      - docker build -t infrum .
+    silent: false
+
+  docker-run:
+    desc: Run Docker container with host filesystem access
+    cmds:
+      - docker run --rm -it -v "$(pwd):/workspace" -w /workspace infrum
+    silent: false
+
+  all:
+    desc: Run full pipeline (vet, fmt, lint, test, build)
+    cmds:
+      - task: vet
+      - task: fmt
+      - task: lint
+      - task: test
+      - task: build

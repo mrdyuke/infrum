@@ -1,0 +1,21 @@
+package routes
+
+import (
+	"{{.AppName}}/internal/domain"
+
+	"github.com/gofiber/fiber/v2"
+)
+
+type HTTPRoutes struct {
+	Usecases domain.UseCases
+}
+
+func Register(app *fiber.App, usecases domain.UseCases) {
+	r := &HTTPRoutes{Usecases: usecases}
+
+	app.Get("/ping", r.Ping)
+}
+
+func (r *HTTPRoutes) Ping(c *fiber.Ctx) error {
+	return c.SendStatus(fiber.StatusOK)
+}

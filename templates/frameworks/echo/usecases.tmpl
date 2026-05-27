@@ -1,0 +1,13 @@
+package usecases
+
+import "{{.AppName}}/internal/domain"
+
+type UseCases struct {
+	Repo domain.Repo
+}
+
+func NewCases(repo domain.Repo) *UseCases {
+	return &UseCases{
+		Repo: repo,
+	}
+}

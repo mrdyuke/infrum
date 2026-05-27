@@ -1,0 +1,38 @@
+package postgres
+
+import (
+	"context"
+	"{{.AppName}}/config"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+)
+
+type PostgresRepo struct {
+	DB *gorm.DB
+}
+
+func NewRepo(appConfig *config.Config, _ context.Context) (*PostgresRepo, error) {
+	db, err := gorm.Open(postgres.Open(appConfig.Dsn), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+
+	sqlDB.SetMaxOpenConns(int(appConfig.MaxConns))
+
+	return &PostgresRepo{
+		DB: db,
+	}, nil
+}
+
+// AutoMigrate — run auto-migrations for your models.
+// Uncomment and add your models:
+//
+//	func (r *PostgresRepo) AutoMigrate() error {
+//	    return r.DB.AutoMigrate(&User{})
+//	}

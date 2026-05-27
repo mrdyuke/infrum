@@ -1,0 +1,46 @@
+package postgres
+
+import (
+	"context"
+	"{{.AppName}}/config"
+
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
+)
+
+type PostgresRepo struct {
+	DB *sqlx.DB
+}
+
+func NewRepo(appConfig *config.Config, ctx context.Context) (*PostgresRepo, error) {
+	db, err := sqlx.ConnectContext(ctx, "postgres", appConfig.Dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	db.SetMaxOpenConns(int(appConfig.MaxConns))
+
+	if err := db.PingContext(ctx); err != nil {
+		return nil, err
+	}
+
+	return &PostgresRepo{
+		DB: db,
+	}, nil
+}
+
+// Create — create a record (stub).
+func (r *PostgresRepo) Create(ctx context.Context) {
+}
+
+// Read — read a record (stub).
+func (r *PostgresRepo) Read(ctx context.Context) {
+}
+
+// Update — update a record (stub).
+func (r *PostgresRepo) Update(ctx context.Context) {
+}
+
+// Delete — delete a record (stub).
+func (r *PostgresRepo) Delete(ctx context.Context) {
+}

@@ -1,0 +1,40 @@
+package main
+
+import (
+	"context"
+	"{{.AppName}}/config"
+	"{{.AppName}}/internal/repository/postgres"
+	"{{.AppName}}/internal/routes"
+	"{{.AppName}}/internal/usecases"
+	"log"
+
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+)
+
+func main() {
+	// 1. Load configuration from .env
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	// 2. Create Echo instance
+	e := echo.New()
+
+	// 3. Middleware
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+
+	// 4. Initialize dependencies
+	repo, err := postgres.NewRepo(cfg, context.Background())
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	usecases := usecases.NewCases(repo)
+	routes.Register(e, usecases)
+
+	// 5. Start server
+	e.Logger.Fatal(e.Start(cfg.Port))
+}

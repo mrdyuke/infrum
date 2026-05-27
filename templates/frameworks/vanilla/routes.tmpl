@@ -1,0 +1,23 @@
+package routes
+
+import (
+	"{{.AppName}}/internal/domain"
+	"net/http"
+)
+
+type HTTPRoutes struct {
+	Usecases domain.UseCases
+}
+
+func NewServeMux(usecases domain.UseCases) *http.ServeMux {
+	r := &HTTPRoutes{Usecases: usecases}
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("GET /ping", r.Ping)
+
+	return mux
+}
+
+func (r *HTTPRoutes) Ping(w http.ResponseWriter, req *http.Request) {
+	w.WriteHeader(http.StatusOK)
+}

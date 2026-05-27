@@ -1,0 +1,23 @@
+package config
+
+import (
+	"fmt"
+
+	"github.com/struct0x/envconfig"
+)
+
+type Config struct {
+	Env      string `env:"ENV"`
+	Port     string `env:"PORT"`
+	Dsn      string `env:"DSN"`
+	MaxConns int32  `env:"MAX_CONNS"`
+}
+
+func Load() (*Config, error) {
+	var cfg Config
+	if err := envconfig.Read(&cfg, envconfig.EnvFileLookup(".env")); err != nil {
+		return nil, err
+	}
+	cfg.Port = fmt.Sprintf(":%s", cfg.Port)
+	return &cfg, nil
+}

@@ -5,6 +5,7 @@ import (
 )
 
 var PrimaryColor = "#7927F5"
+var ErrorColor = "#FF4444"
 
 func TextInputStyle(str string) string {
 	return lipgloss.NewStyle().
@@ -29,5 +30,19 @@ func TitleStyle(str string) string {
 		Bold(true).
 		MarginTop(2).
 		MarginBottom(1).
+		Render(str)
+}
+
+func CursorPointerStyle() string {
+	return lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color(PrimaryColor)).
+		Render(">")
+}
+
+func ErrorStyle(str string) string {
+	return lipgloss.NewStyle().
+		Foreground(lipgloss.Color(ErrorColor)).
+		Bold(true).
 		Render(str)
 }
