@@ -1,0 +1,50 @@
+package routes
+
+import (
+	"{{.AppName}}/internal/domain"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
+
+// HTTPRoutes — the HTTP handler layer.
+//
+// It receives HTTP requests, parses them, and delegates to UseCases.
+// Returns JSON responses to the client.
+//
+// Order of adding a new handler:
+//  1. Define the method in domain.UseCases (internal/domain/domain.go)
+//  2. Implement it in usecases (internal/usecases/usecases.go)
+//  3. Add the handler here — it will call r.Usecases directly
+//
+// Example handler (after methods are added to domain.UseCases):
+//
+//	func (r *HTTPRoutes) CreateUser(c *gin.Context) {
+//	    var req domain.CreateUserReq
+//	    if err := c.ShouldBindJSON(&req); err != nil {
+//	        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+//	        return
+//	    }
+//
+//	    user, err := r.Usecases.CreateUser(c.Request.Context(), req)
+//	    if err != nil {
+//	        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+//	        return
+//	    }
+//
+//	    c.JSON(http.StatusCreated, user)
+//	}
+type HTTPRoutes struct {
+	Usecases domain.UseCases
+}
+
+func NewHTTPRoutes(usecases domain.UseCases) *HTTPRoutes {
+	return &HTTPRoutes{
+		Usecases: usecases,
+	}
+}
+
+// Ping — simple health-check endpoint.
+func (r *HTTPRoutes) Ping(c *gin.Context) {
+	c.Status(http.StatusOK)
+}

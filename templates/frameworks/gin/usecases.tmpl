@@ -1,0 +1,33 @@
+package usecases
+
+import "{{.AppName}}/internal/domain"
+
+// UseCases implements the application's business logic.
+//
+// It calls Repo for data operations and applies business rules.
+// UseCases methods are called from HTTP handlers (routes).
+//
+// Example of adding a method:
+//
+//	func (uc *UseCases) CreateUser(ctx context.Context, req domain.CreateUserReq) (domain.User, error) {
+//	    // business validations
+//	    if req.Name == "" {
+//	        return domain.User{}, fmt.Errorf("name is required")
+//	    }
+//	    // call repository
+//	    user, err := uc.Repo.Create(ctx, req)
+//	    if err != nil {
+//	        return domain.User{}, fmt.Errorf("create user: %w", err)
+//	    }
+//	    return user, nil
+//	}
+
+type UseCases struct {
+	Repo domain.Repo
+}
+
+func NewCases(repo domain.Repo) *UseCases {
+	return &UseCases{
+		Repo: repo,
+	}
+}

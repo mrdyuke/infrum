@@ -1,0 +1,74 @@
+package postgres
+
+import (
+	"context"
+	"{{.AppName}}/config"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// PostgresRepo — PostgreSQL repository implementation.
+//
+// Uses pgxpool for connection pooling.
+// Implements the domain.Repo interface (once it is defined).
+//
+// Example of adding a method:
+//
+//	func (r *PostgresRepo) Create(ctx context.Context, entity interface{}) error {
+//	    query := `INSERT INTO users (name, email, created_at)
+//	              VALUES ($1, $2, NOW())
+//	              RETURNING id, created_at, updated_at`
+//
+//    	row := r.Pool.QueryRow(ctx, query, entity.Name, entity.Email)
+//    	if err := row.Scan(&entity.ID, &entity.CreatedAt, &entity.UpdatedAt); err != nil {
+//    	    return fmt.Errorf("insert user: %w", err)
+//    	}
+//    	return nil
+//	}
+
+type PostgresRepo struct {
+	Pool *pgxpool.Pool
+}
+
+func NewRepo(appConfig *config.Config, ctx context.Context) (*PostgresRepo, error) {
+	cfg, err := pgxpool.ParseConfig(appConfig.Dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg.MaxConns = appConfig.MaxConns
+
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	err = pool.Ping(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &PostgresRepo{
+		Pool: pool,
+	}, nil
+}
+
+// Create — create a record (stub).
+// Uncomment and adapt to your model.
+func (r *PostgresRepo) Create(ctx context.Context) {
+}
+
+// Read — read a record (stub).
+// Uncomment and adapt to your model.
+func (r *PostgresRepo) Read(ctx context.Context) {
+}
+
+// Update — update a record (stub).
+// Uncomment and adapt to your model.
+func (r *PostgresRepo) Update(ctx context.Context) {
+}
+
+// Delete — delete a record (stub).
+// Uncomment and adapt to your model.
+func (r *PostgresRepo) Delete(ctx context.Context) {
+}

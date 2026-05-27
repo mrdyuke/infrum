@@ -1,0 +1,57 @@
+package domain
+
+// UseCases — the application's business logic layer.
+//
+// This is the top-level interface that defines what functionality
+// is exposed via the HTTP API. UseCases calls Repo for data access
+// and contains business rules.
+//
+// Example of adding methods:
+//
+//	type UseCases interface {
+//	    CreateUser(ctx context.Context, req CreateUserReq) (User, error)
+//	    GetUser(ctx context.Context, id string) (User, error)
+//	    ListUsers(ctx context.Context, filter map[string]interface{}) ([]User, error)
+//	    UpdateUser(ctx context.Context, req UpdateUserReq) (User, error)
+//	    DeleteUser(ctx context.Context, id string) error
+//	}
+
+type UseCases interface{}
+
+// Repo — the data access layer (Repository).
+//
+// Defines the contract for data access.
+// The implementation lives in internal/repository/.
+//
+// Example of adding methods:
+//
+//	type Repo interface {
+//	    Create(ctx context.Context, entity interface{}) error
+//	    GetByID(ctx context.Context, id string, dest interface{}) error
+//	    List(ctx context.Context, filter map[string]interface{}, dest interface{}) error
+//	    Update(ctx context.Context, entity interface{}) error
+//	    Delete(ctx context.Context, id string) error
+//	}
+
+type Repo interface{}
+
+// Example models (uncomment and adapt to your use case):
+//
+// type User struct {
+//     ID        string    `json:"id" db:"id"`
+//     Name      string    `json:"name" db:"name" validate:"required"`
+//     Email     string    `json:"email" db:"email" validate:"required,email"`
+//     CreatedAt time.Time `json:"created_at" db:"created_at"`
+//     UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+// }
+//
+// type CreateUserReq struct {
+//     Name  string `json:"name" binding:"required"`
+//     Email string `json:"email" binding:"required,email"`
+// }
+//
+// type UpdateUserReq struct {
+//     ID    string `json:"id" binding:"required"`
+//     Name  string `json:"name"`
+//     Email string `json:"email"`
+// }

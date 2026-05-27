@@ -1,9 +1,12 @@
 package generator
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
+	"text/template"
 
 	"github.com/mrdyuke/infrum/domain"
 )
@@ -28,6 +31,9 @@ func NewGenerator() (*Generator, error) {
 }
 
 func (g *Generator) Generate() error {
+	if len(strings.TrimSpace(g.AppName)) == 0 {
+		return errors.New("empty app name")
+	}
 	g.TargetDir = filepath.Join(g.TargetDir, g.AppName)
 
 	for _, lib := range g.LibList {
@@ -37,7 +43,20 @@ func (g *Generator) Generate() error {
 				return err
 			}
 			for name, data := range file {
-				err := os.WriteFile(filepath.Join(g.TargetDir, path, name), []byte(data), 0644)
+				filePath := filepath.Join(g.TargetDir, path, name)
+				f, err := os.Create(filePath)
+				if err != nil {
+					return err
+				}
+
+				tmpl, err := template.New(name).Parse(data)
+				if err != nil {
+					_ = f.Close()
+					return err
+				}
+
+				err = tmpl.Execute(f, g)
+				_ = f.Close()
 				if err != nil {
 					return err
 				}

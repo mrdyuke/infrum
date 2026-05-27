@@ -1,0 +1,57 @@
+package main
+
+import (
+	"context"
+	"{{.AppName}}/config"
+	"{{.AppName}}/internal/repository/postgres"
+	"{{.AppName}}/internal/routes"
+	"{{.AppName}}/internal/usecases"
+	"log"
+
+	"github.com/fvbock/endless"
+	"github.com/gin-gonic/gin"
+)
+
+func main() {
+	// 1. Load configuration from .env
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	// 2. In production, enable Gin release mode
+	if cfg.Env == "prod" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	// 3. Create router with middleware
+	router := gin.New()
+
+	router.Use(gin.Logger())
+	router.Use(gin.Recovery())
+
+	// 4. Initialize dependencies
+	//    When adding new dependencies (Redis, S3, etc.)
+	//    wire them here and pass to usecases.
+	repo, err := postgres.NewRepo(cfg, context.Background())
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	usecases := usecases.NewCases(repo)
+	routes := routes.NewHTTPRoutes(usecases)
+
+	// 5. Register routes
+	//    Add new routes here:
+	//    router.POST("/users", routes.CreateUser)
+	//    router.GET("/users/:id", routes.GetUser)
+	//    router.GET("/users", routes.ListUsers)
+	//    router.PUT("/users/:id", routes.UpdateUser)
+	//    router.DELETE("/users/:id", routes.DeleteUser)
+	router.GET("/ping", routes.Ping)
+
+	// 6. Start server with graceful shutdown
+	if err := endless.ListenAndServe(cfg.Port, router); err != nil {
+		log.Fatalln(err)
+	}
+}
